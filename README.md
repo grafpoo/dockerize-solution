@@ -1,12 +1,17 @@
-# dockerize-solution
+# Solution
+
+# Containerize a PostgreSQL database with the application's schema
+
+this solution pushed to the default dockerhub...
 
 ## Step 1
 
-Using the Dockerfile in this project, first create a [docker volume](https://docs.docker.com/storage/volumes/), then the image. And test it all:
+Using the Dockerfile at the bottom of this solution, first create a [docker volume](https://docs.docker.com/storage/volumes/), then the image. And test it all:
 
 ```sh
+docker volume create footievol
 docker build -t pgtest .
-docker run --name footie -d -p 5432:5432 --mount source=footie,target=/var/lib/postgresql/data pgtest
+docker run --name footie -d -p 5432:5432 --mount source=footievol,target=/var/lib/postgresql/data pgtest
 ```
 
 You can verify that the volume makes database changes persistent by removing the running docker container. In a bash shell (MacOS or Linux), you can do it as a one-liner via:
@@ -19,41 +24,22 @@ docker ps | grep pgtest | awk '{print $1}' | xargs docker rm -f
 
 ## Step 2
 
-Kaniko runs as a container image. The easiest way to run this container locally is with ... Docker, of course. Kaniko will also push the image it creates to a container registry, in the same command, so the one-liner to do it all:
+in step 1, you already created a working image. You can either re-create it here, with the correct tags to allow it to be pushed
 
 ```sh
-docker run -v $(pwd):/root -v $(pwd)/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile ./Dockerfile --context /root --destination <your-docker-username>/pgtest
+docker build -t <your-dockerhub-username>/pgtest .
 ```
 
-where _/root_ is the context in the running image (specified in a couple of places). The _config.json_ that is passed into kaniko contains my (dockerhub)[https://hub.docker.com/] login username and password, base64-encoded. It looks something like this:
-
-```json
-{
-    "auths": {
-        "https://index.docker.io/v1/": {
-            "auth": "Z3JcZrBofwplZ9dzYWiqXA=="
-        }
-    }
-}
-```
-
-the _auth_ value is created via the command:
+or just tag the image you created above:
 
 ```sh
-echo -n <docker-username>:<docker-password> | base64
+docker tag pgtest <your-dockerhub-username>/pgtest
 ```
 
-the output string is the value for _auth_
+## Step 3
 
-
-Then you can again test the image by running:
-
-```sh
-docker run --name footie -d -p 5432:5432 --mount source=footie,target=/var/lib/postgresql/data <your-docker-username>/pgtest
-```
-
-Don't forget to remove the currently running local pgtest containers
+Now you just need to push the image. Note that you may need to first log in to the docker registry you are using
 
 ```sh
-docker ps | grep pgtest | awk '{print $1}' | xargs docker rm -f
+docker push <your-dockerhub-username>/pgtest
 ```
